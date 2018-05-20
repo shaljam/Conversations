@@ -76,7 +76,7 @@ android {
         versionCode 270
         versionName "2.2.0"
         archivesBaseName += "-$versionName"
-        applicationId "eu.siacs.conversations"
+        applicationId "ir.momensani.tooti"
         resValue "string", "applicationId", applicationId
         resValue "string", "app_name", "Conversations"
     }
