@@ -23,7 +23,7 @@ public class WelcomeActivity extends XmppActivity {
 	}
 
 	@Override
-	void onBackendConnected() {
+	protected void onBackendConnected() {
 
 	}
 
