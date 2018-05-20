@@ -1,26 +1,24 @@
 package eu.siacs.conversations.services;
 
-import android.provider.Settings;
 import android.util.Log;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
-import com.google.android.gms.gcm.GoogleCloudMessaging;
-import com.google.android.gms.iid.InstanceID;
+import com.google.firebase.iid.FirebaseInstanceId;
 
 import eu.siacs.conversations.Config;
-import eu.siacs.conversations.R;
 import eu.siacs.conversations.entities.Account;
-import eu.siacs.conversations.xml.Element;
-import eu.siacs.conversations.xml.Namespace;
 import eu.siacs.conversations.xmpp.XmppConnection;
-import eu.siacs.conversations.xmpp.forms.Data;
 import eu.siacs.conversations.xmpp.stanzas.IqPacket;
+import ir.momensani.tooti.Utils;
+import ir.momensani.tooti.ui.RegisterActivity;
 import rocks.xmpp.addr.Jid;
+
 
 public class PushManagementService {
 
-	private static final Jid APP_SERVER = Jid.of("push.siacs.eu");
+	private static final Jid APP_SERVER =
+			Jid.of(String.format("pubsub.%s", RegisterActivity.SERVER));
 
 	protected final XmppConnectionService mXmppConnectionService;
 
@@ -30,30 +28,24 @@ public class PushManagementService {
 
 	void registerPushTokenOnServer(final Account account) {
 		Log.d(Config.LOGTAG, account.getJid().asBareJid() + ": has push support");
-		retrieveGcmInstanceToken(token -> {
-			final String deviceId = Settings.Secure.getString(mXmppConnectionService.getContentResolver(), Settings.Secure.ANDROID_ID);
-			IqPacket packet = mXmppConnectionService.getIqGenerator().pushTokenToAppServer(APP_SERVER, token, deviceId);
-			mXmppConnectionService.sendIqPacket(account, packet, (a, p) -> {
-				Element command = p.findChild("command", "http://jabber.org/protocol/commands");
-				if (p.getType() == IqPacket.TYPE.RESULT && command != null) {
-					Element x = command.findChild("x", Namespace.DATA);
-					if (x != null) {
-						Data data = Data.parse(x);
-						try {
-							String node = data.getValue("node");
-							String secret = data.getValue("secret");
-							Jid jid = Jid.of(data.getValue("jid"));
-							if (node != null && secret != null) {
-								enablePushOnServer(a, jid, node, secret);
-							}
-						} catch (IllegalArgumentException e) {
-							e.printStackTrace();
-						}
-					}
-				} else {
-					Log.d(Config.LOGTAG, a.getJid().asBareJid() + ": invalid response from app server");
-				}
-			});
+		String token = FirebaseInstanceId.getInstance().getToken();
+		String md5Token = Utils.md5(token);
+		if (md5Token == null) {
+			Log.e(Config.LOGTAG, "create push node failed to encode token: " + token);
+			return;
+		}
+
+		IqPacket packet = mXmppConnectionService.getIqGenerator().createPushNode(APP_SERVER, md5Token);
+		mXmppConnectionService.sendIqPacket(account, packet, (a, p) -> {
+			if (p.getType() == IqPacket.TYPE.RESULT) {
+				enablePushOnMongooseServer(a, APP_SERVER, md5Token, token);
+			} else if (p.getType() == IqPacket.TYPE.ERROR && p.getError() != null && p.getError().getName().equals("conflict")) {
+				Log.d(Config.LOGTAG, a.getJid().asBareJid() + ": create push node conflict error");
+				enablePushOnMongooseServer(a, APP_SERVER, md5Token, token);
+			}
+			else {
+				Log.d(Config.LOGTAG, a.getJid().asBareJid() + ": create push node invalid response");
+			}
 		});
 	}
 
@@ -68,19 +60,16 @@ public class PushManagementService {
 		});
 	}
 
-	private void retrieveGcmInstanceToken(final OnGcmInstanceTokenRetrieved instanceTokenRetrieved) {
-		new Thread(() -> {
-			InstanceID instanceID = InstanceID.getInstance(mXmppConnectionService);
-			try {
-				String token = instanceID.getToken(mXmppConnectionService.getString(R.string.gcm_defaultSenderId), GoogleCloudMessaging.INSTANCE_ID_SCOPE, null);
-				instanceTokenRetrieved.onGcmInstanceTokenRetrieved(token);
-			} catch (Exception e) {
-				Log.d(Config.LOGTAG, "unable to get push token");
+	private void enablePushOnMongooseServer(final Account account, final Jid jid, final String node, String token) {
+		IqPacket enable = mXmppConnectionService.getIqGenerator().enableMongoosePush(jid, node, token, false);
+		mXmppConnectionService.sendIqPacket(account, enable, (a, p) -> {
+			if (p.getType() == IqPacket.TYPE.RESULT) {
+				Log.d(Config.LOGTAG, a.getJid().asBareJid() + ": successfully enabled push on MongooseIM server");
+			} else if (p.getType() == IqPacket.TYPE.ERROR) {
+				Log.d(Config.LOGTAG, a.getJid().asBareJid() + ": enabling push on MongooseIM server failed");
 			}
-		}).start();
-
+		});
 	}
-
 
 	public boolean available(Account account) {
 		final XmppConnection connection = account.getXmppConnection();
@@ -98,7 +87,5 @@ public class PushManagementService {
 		return false;
 	}
 
-	interface OnGcmInstanceTokenRetrieved {
-		void onGcmInstanceTokenRetrieved(String token);
-	}
+
 }

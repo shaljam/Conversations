@@ -438,4 +438,33 @@ public class IqGenerator extends AbstractGenerator {
 		}
 		return packet;
 	}
+
+	public IqPacket createPushNode(Jid jid, String node) {
+		IqPacket packet = new IqPacket(IqPacket.TYPE.SET);
+		packet.setTo(jid);
+		Element pubsub = packet.addChild("pubsub", Namespace.PUBSUB);
+		pubsub.addChild("create")
+				.setAttribute("node", node)
+				.setAttribute("type", "push");
+
+		return packet;
+	}
+
+	public IqPacket enableMongoosePush(Jid jid, String node, String token, boolean silent) {
+		IqPacket packet = new IqPacket(IqPacket.TYPE.SET);
+		Element enable = packet.addChild("enable","urn:xmpp:push:0");
+		enable.setAttribute("jid", jid.toString());
+		enable.setAttribute("node", node);
+		Data data = new Data();
+		data.setFormType(Namespace.PUBSUB_PUBLISH_OPTIONS);
+		data.put("service", "fcm");
+		data.put("device_id", token);
+		if (silent) {
+			data.put("silent", "true");
+		}
+		data.put("click_action", "OPEN_CONVERSATIONS_ACTIVITY");
+		data.submit();
+		enable.addChild(data);
+		return packet;
+	}
 }
