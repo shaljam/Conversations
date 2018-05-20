@@ -17,6 +17,7 @@ import eu.siacs.conversations.Config;
 import eu.siacs.conversations.R;
 import eu.siacs.conversations.persistance.DatabaseBackend;
 import eu.siacs.conversations.utils.XmppUri;
+import ir.momensani.tooti.ui.RegisterActivity;
 import rocks.xmpp.addr.Jid;
 
 public class UriHandlerActivity extends AppCompatActivity {
@@ -91,7 +92,7 @@ public class UriHandlerActivity extends AppCompatActivity {
 		}
 
 		if (accounts.size() == 0 && Config.MAGIC_CREATE_DOMAIN != null) {
-			intent = new Intent(getApplicationContext(), WelcomeActivity.class);
+			intent = new Intent(getApplicationContext(), RegisterActivity.class);
 			WelcomeActivity.addInviteUri(intent, xmppUri);
 			startActivity(intent);
 			return;

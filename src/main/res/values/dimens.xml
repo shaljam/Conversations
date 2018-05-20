@@ -26,4 +26,5 @@
 	<dimen name="swipe_escape_velocity">1200dp</dimen> <!-- android default is 120dp -->
 
 	<dimen name="background_image_opacity">0.12</dimen>
+    <dimen name="fab_margin">16dp</dimen>
 </resources>

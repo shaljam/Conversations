@@ -712,4 +712,19 @@
     <string name="pref_use_share_location_plugin_summary">Use the Share Location Plugin instead of the build in map</string>
     <string name="copy_link">Copy web address</string>
     <string name="copy_jabber_id">Copy Jabber ID</string>
+
+    <string name="title_activity_register">Register with phone number</string>
+    <string name="register_phone_number">Phone number</string>
+    <string name="register_confirmation_code">Confirmation code</string>
+    <string name="register">Register</string>
+    <string name="login">Login</string>
+    <string name="phone_number_prefix">\+98</string>
+    <string name="invalid_phone_number">Bad phone number.</string>
+    <string name="resend_code">Resend code</string>
+    <string name="password_length">Password is too short.</string>
+    <string name="confirm_code">Confirm</string>
+    <string name="failed_to_connect">Failed to connect to server.</string>
+    <string name="creating_account_dialog">Creating account...</string>
+    <string name="too_many_requests">Too many requests.</string>
+
 </resources>

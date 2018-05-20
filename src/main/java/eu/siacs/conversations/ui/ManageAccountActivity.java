@@ -33,6 +33,7 @@ import eu.siacs.conversations.services.XmppConnectionService.OnAccountUpdate;
 import eu.siacs.conversations.ui.adapter.AccountAdapter;
 import eu.siacs.conversations.ui.util.MenuDoubleTabUtil;
 import eu.siacs.conversations.xmpp.XmppConnection;
+import ir.momensani.tooti.ui.RegisterActivity;
 import rocks.xmpp.addr.Jid;
 
 public class ManageAccountActivity extends XmppActivity implements OnAccountUpdate, KeyChainAliasCallback, XmppConnectionService.OnAccountCreated {
@@ -353,7 +354,7 @@ public class ManageAccountActivity extends XmppActivity implements OnAccountUpda
 					xmppConnectionService.deleteAccount(account);
 					selectedAccount = null;
 					if (xmppConnectionService.getAccounts().size() == 0 && Config.MAGIC_CREATE_DOMAIN != null) {
-						WelcomeActivity.launch(this);
+						RegisterActivity.launch(this);
 					}
 				});
 		builder.setNegativeButton(getString(R.string.cancel), null);

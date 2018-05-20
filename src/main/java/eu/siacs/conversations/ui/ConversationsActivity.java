@@ -77,6 +77,7 @@ import eu.siacs.conversations.ui.util.MenuDoubleTabUtil;
 import eu.siacs.conversations.ui.util.PendingItem;
 import eu.siacs.conversations.utils.ExceptionHelper;
 import eu.siacs.conversations.xmpp.OnUpdateBlocklist;
+import ir.momensani.tooti.ui.RegisterActivity;
 
 import static eu.siacs.conversations.ui.ConversationFragment.REQUEST_DECRYPT_PGP;
 
@@ -188,7 +189,7 @@ public class ConversationsActivity extends XmppActivity implements OnConversatio
 				if (Config.X509_VERIFICATION) {
 					intent = new Intent(this, ManageAccountActivity.class);
 				} else if (Config.MAGIC_CREATE_DOMAIN != null) {
-					intent = new Intent(this, WelcomeActivity.class);
+					intent = new Intent(this, RegisterActivity.class);
 					WelcomeActivity.addInviteUri(intent, getIntent());
 				} else {
 					intent = new Intent(this, EditAccountActivity.class);

@@ -75,6 +75,7 @@ import eu.siacs.conversations.xmpp.XmppConnection;
 import eu.siacs.conversations.xmpp.XmppConnection.Features;
 import eu.siacs.conversations.xmpp.forms.Data;
 import eu.siacs.conversations.xmpp.pep.Avatar;
+import ir.momensani.tooti.ui.RegisterActivity;
 import rocks.xmpp.addr.Jid;
 
 public class EditAccountActivity extends OmemoActivity implements OnAccountUpdate, OnUpdateBlocklist,
@@ -314,7 +315,7 @@ public class EditAccountActivity extends OmemoActivity implements OnAccountUpdat
 		}
 
 		if (xmppConnectionService.getAccounts().size() == 0 && Config.MAGIC_CREATE_DOMAIN != null) {
-			Intent intent = new Intent(EditAccountActivity.this, WelcomeActivity.class);
+			Intent intent = new Intent(EditAccountActivity.this, RegisterActivity.class);
 			WelcomeActivity.addInviteUri(intent, getIntent());
 			startActivity(intent);
 		}
@@ -675,8 +676,8 @@ public class EditAccountActivity extends OmemoActivity implements OnAccountUpdat
 		}
 		SharedPreferences preferences = getPreferences();
 		mUseTor = Config.FORCE_ORBOT || preferences.getBoolean("use_tor", false);
-		this.mShowOptions = mUseTor || preferences.getBoolean("show_connection_options", false);
-		this.mNamePort.setVisibility(mShowOptions ? View.VISIBLE : View.GONE);
+		this.mShowOptions = mUseTor || preferences.getBoolean("show_connection_options", true);
+		this.mNamePort.setVisibility(View.GONE);
 	}
 
 	@Override
@@ -934,7 +935,7 @@ public class EditAccountActivity extends OmemoActivity implements OnAccountUpdat
 			this.mHostname.getEditableText().append(this.mAccount.getHostname());
 			this.mPort.setText("");
 			this.mPort.getEditableText().append(String.valueOf(this.mAccount.getPort()));
-			this.mNamePort.setVisibility(mShowOptions ? View.VISIBLE : View.GONE);
+			this.mNamePort.setVisibility(View.GONE);
 
 		}
 
