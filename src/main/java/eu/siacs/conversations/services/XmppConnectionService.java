@@ -136,6 +136,9 @@ import eu.siacs.conversations.xmpp.pep.Avatar;
 import eu.siacs.conversations.xmpp.stanzas.IqPacket;
 import eu.siacs.conversations.xmpp.stanzas.MessagePacket;
 import eu.siacs.conversations.xmpp.stanzas.PresencePacket;
+import io.reactivex.Observable;
+import ir.momensani.tooti.ContactManager;
+import ir.momensani.tooti.PhoneContactsDataBase;
 import me.leolin.shortcutbadger.ShortcutBadger;
 import rocks.xmpp.addr.Jid;
 
@@ -549,7 +552,7 @@ public class XmppConnectionService extends Service {
 					break;
 				case ACTION_MERGE_PHONE_CONTACTS:
 					if (restoredFromDatabaseLatch.getCount() == 0) {
-						loadPhoneContacts();
+						loadPhoneContactsNew();
 					}
 					return START_STICKY;
 				case Intent.ACTION_SHUTDOWN:
@@ -1386,7 +1389,7 @@ public class XmppConnectionService extends Service {
 					account.initAccountServices(XmppConnectionService.this); //roster needs to be loaded at this stage
 				}
 				getBitmapCache().evictAll();
-				loadPhoneContacts();
+				loadPhoneContactsNew();
 				Log.d(Config.LOGTAG, "restoring messages...");
 				final long startMessageRestore = SystemClock.elapsedRealtime();
 				final Conversation quickLoad = QuickLoader.get(this.conversations);
@@ -1458,6 +1461,63 @@ public class XmppConnectionService extends Service {
 				updateAccountUi();
 			}
 		}));
+	}
+
+	public void loadPhoneContactsNew() {
+		mContactMergerExecutor.execute(() -> {
+			for (Account account : accounts) {
+				ContactManager.loadPhoneContacts(XmppConnectionService.this, account, phoneContacts -> {
+                    Log.d(Config.LOGTAG, "start merging phone contacts with roster");
+                    List<Contact> withSystemAccounts = account.getRoster().getWithSystemAccounts();
+					HashSet<String> jids = new HashSet<>(Observable.fromIterable(withSystemAccounts)
+							.map(x -> x.getJid().asBareJid().toEscapedString())
+							.toList().blockingGet());
+                    for (Bundle phoneContact : phoneContacts) {
+                        Jid jid;
+                        try {
+                            jid = Jid.of(phoneContact.getString("jid"));
+                        } catch (final IllegalArgumentException e) {
+                            continue;
+                        }
+                        final Contact contact = account.getRoster().getContact(jid);
+                        String systemAccount = phoneContact.getInt("phoneid")
+                                + "#"
+                                + phoneContact.getString("lookup");
+                        contact.setSystemAccount(systemAccount);
+                        boolean needsCacheClean = contact.setPhotoUri(phoneContact.getString("photouri"));
+                        needsCacheClean |= contact.setSystemName(phoneContact.getString("displayname"));
+                        if (needsCacheClean) {
+                            getAvatarService().clear(contact);
+                        }
+
+                        if (!jids.contains(jid.toEscapedString())) {
+                        	contact.setOption(Contact.Options.ASKING);
+							contact.setOption(Contact.Options.PREEMPTIVE_GRANT);
+							contact.setOption(Contact.Options.PENDING_SUBSCRIPTION_REQUEST);
+                        	XmppConnectionService.this.pushContactToServer(contact);
+						}
+
+                        withSystemAccounts.remove(contact);
+                    }
+                    for (Contact contact : withSystemAccounts) {
+                        contact.setSystemAccount(null);
+                        boolean needsCacheClean = contact.setPhotoUri(null);
+                        needsCacheClean |= contact.setSystemName(null);
+                        if (needsCacheClean) {
+                            getAvatarService().clear(contact);
+                        }
+                    }
+
+					Log.e(Config.LOGTAG, String.format("finished merging phone contacts for account: %s", account.getUsername()));
+					mShortcutService.refresh(mInitialAddressbookSyncCompleted.compareAndSet(false, true));
+					updateAccountUi();
+                });
+			}
+
+			// Log.e(Config.LOGTAG, "finished merging phone contacts");
+			// mShortcutService.refresh(mInitialAddressbookSyncCompleted.compareAndSet(false, true));
+			// updateAccountUi();
+		});
 	}
 
 
@@ -2665,6 +2725,8 @@ public class XmppConnectionService extends Service {
 		} else {
 			syncRoster(contact.getAccount());
 		}
+
+		ContactManager.setContactAdded(getApplicationContext(), contact.getJid());
 	}
 
 	public void publishAvatar(final Account account, final Uri image, final UiCallback<Avatar> callback) {
@@ -2936,6 +2998,8 @@ public class XmppConnectionService extends Service {
 			item.setAttribute("subscription", "remove");
 			account.getXmppConnection().sendIqPacket(iq, mDefaultIqHandler);
 		}
+
+		ContactManager.setContactDeleted(getApplicationContext(), contact.getJid());
 	}
 
 	public void updateConversation(final Conversation conversation) {

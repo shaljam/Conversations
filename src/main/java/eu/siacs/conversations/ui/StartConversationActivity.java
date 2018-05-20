@@ -691,7 +691,7 @@ public class StartConversationActivity extends XmppActivity implements XmppConne
 						});
 						builder.create().show();
 					} else {
-						requestPermissions(new String[]{Manifest.permission.READ_CONTACTS}, 0);
+						requestPermissions(new String[]{Manifest.permission.READ_CONTACTS}, REQUEST_SYNC_CONTACTS);
 					}
 				}
 			}
@@ -704,7 +704,7 @@ public class StartConversationActivity extends XmppActivity implements XmppConne
 			if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 				ScanActivity.onRequestPermissionResult(this, requestCode, grantResults);
 				if (requestCode == REQUEST_SYNC_CONTACTS && xmppConnectionServiceBound) {
-					xmppConnectionService.loadPhoneContacts();
+					xmppConnectionService.loadPhoneContactsNew();
 				}
 			}
 	}
